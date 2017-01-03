@@ -54,9 +54,7 @@ function microservice_settings() {
   $request = new stdClass();
   $request->query = new stdClass();
 
-
   $result = $microservice->search($request);
-  //backdrop_set_message('<pre>' . print_r($result,true). '</pre>');
 
   if($result){
     $header = array(
@@ -110,12 +108,6 @@ function microservice_settings() {
       '#multiple' => FALSE,
       '#js_select' => FALSE,
       '#empty' => t('No routes available.'),
-/*      '#ajax' => array(
-        'callback' => 'ajax_billing_balance_callback',
-        'wrapper' => 'biling_balance_payment_form',
-        'effect' => 'fade',
-
-      )*/
     );
   }
 

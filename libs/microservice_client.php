@@ -40,7 +40,7 @@ class MicroserviceClient {
   protected $age = FALSE;
   // How much results per page.
   public $per_page = 100;
-  
+
   // Signature algorithm
   public $algorithm = 'sha256';
 
@@ -69,7 +69,7 @@ class MicroserviceClient {
     $this->curl->setHeader('Content-Type', 'application/json');
     $this->curl->setUserAgent('Backdrop CMS MicroserviceClient');
     $this->curl->setHeader('Accept', '*/*');
-    
+
     if($this->AccessToken) {
       $this->curl->setHeader('access_token', $this->AccessToken);
     }
@@ -84,7 +84,7 @@ class MicroserviceClient {
   public function setDebug($debug = FALSE) {
     $this->debug = $debug;
   }
-  
+
   /**
    * Determine if curl request has been falen with error.
    *
@@ -261,7 +261,7 @@ class MicroserviceClient {
   public function isCached() {
     return $this->cache_expiration;
   }
-  
+
   /**
    * Generate signature.
    *
@@ -269,7 +269,7 @@ class MicroserviceClient {
    * @return
    *   signature.
    */
-  protected function signature($data) {    
+  protected function signature($data) {
     return $this->algorithm . '=' . hash_hmac($this->algorithm, json_encode($data), $this->secureKey);
   }
 
@@ -351,7 +351,7 @@ class MicroserviceClient {
     $this->reInitCurl();
     return $response;
   }
-  
+
    /**
    * Perform SEARCH request to GitHub API and return answer.
    *
@@ -367,7 +367,7 @@ class MicroserviceClient {
 
     $this->curl->search($this->Url, $data);
     $response = $this->getResponse();
-    $this->reInitCurl();    
+    $this->reInitCurl();
     return $response;
   }
 
