@@ -1,0 +1,195 @@
+<?php
+/**
+ * @file
+ * Microservice integration module.
+ */
+
+/**
+ * Implements hook_config_info().
+ */
+function microservice_config_info() {
+  $prefixes['microservice.settings'] = array(
+    'label' => t('microservice settings'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
+}
+
+/**
+ * Implements hook_autoload_info().
+ */
+function microservice_autoload_info() {
+  return array(
+    'MicroserviceClient' => 'libs/microservice_client.php',
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function microservice_menu() {
+  $items = array();
+
+  /* Admin settings. */
+  $items['admin/config/microservice'] = array(
+    'title' => 'Microservice API settings',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('microservice_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+    'description' => 'API configuration for Microservice.',
+  );
+  return $items;
+}
+
+/**
+ * Menu callback for admin/config/system/githubapi/microservice_users.
+ */
+function microservice_settings() {
+  $config = config('microservice.settings');
+
+  $microservice_settings['url'] = $config->get('url');
+  $microservice_settings['secureKey'] =  $config->get('secure');
+  $microservice = new MicroserviceClient($microservice_settings);
+  $request = new stdClass();
+  $request->query = new stdClass();
+
+
+  $result = $microservice->search($request);
+  //backdrop_set_message('<pre>' . print_r($result,true). '</pre>');
+
+  if($result){
+    $header = array(
+      'path' => array('data' => t('Path')),
+      'url' => array('data' => t('Internal URL')),
+      'loadavg' => array('data' => t('Loadavg')),
+      'workers' => array('data' => t('Workers')),
+      'cpu' => array('data' => t('CPU')),
+      'mem' => array('data' => t('Memory')),
+      'started' => array('data' => t('Started')),
+      'changed' => array('data' => t('Last update')),
+    );
+    $options = array();
+    foreach($result as $item) {
+      $count = count($item->metrics);
+      $cpu = 0;
+      $mem = 0;
+      $loadavg = array(0,0,0);
+      foreach($item->metrics as $metric) {
+        $cpu = $cpu + $metric->cpu;
+        $mem = $mem + $metric->memory;
+        $loadavg = $metric->loadavg;
+      }
+      foreach($loadavg as $key => $value) {
+        $loadavg[$key] = round($value, 2);
+      }
+      if($count > 0) {
+        $cpu = $cpu/$count;
+        $mem = round($mem, 2);
+      }
+      $path ='';
+      foreach($item->path as $path_item) {
+        $path .= '/' . $path_item . '<br>';
+      }
+      $options[$item->_id] = array(
+        'path' => $path,
+        'url' => $item->url,
+        'loadavg' => implode(' ', $loadavg),
+        'workers' => $count,
+        'cpu' => $cpu,
+        'mem' => t('!mem Mb', array('!mem' => $mem)),
+        'changed' => t('@time ago', array('@time' => format_interval(time() - $item->changed/1000))),
+        'started' => t('@time ago', array('@time' => format_interval(time() - $item->created/1000))),
+      );
+    }
+
+    $form['routes'] = array(
+      '#type' => 'tableselect',
+      '#header' => $header,
+      '#options' => $options,
+      '#multiple' => FALSE,
+      '#js_select' => FALSE,
+      '#empty' => t('No routes available.'),
+/*      '#ajax' => array(
+        'callback' => 'ajax_billing_balance_callback',
+        'wrapper' => 'biling_balance_payment_form',
+        'effect' => 'fade',
+
+      )*/
+    );
+  }
+
+  $form['url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Admin URL'),
+    '#default_value' => $config->get('url'),
+    '#description' => t('API URL for admin.'),
+  );
+  $form['proxy_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Proxy URL'),
+    '#default_value' => $config->get('proxy_url'),
+    '#description' => t('API URL for proxy.'),
+  );
+
+  $form['secure'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Secure'),
+    '#default_value' => $config->get('secure'),
+    '#description' => t('API Secure for users.'),
+  );
+
+  $form['actions']['#type'] = 'actions';
+
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save configuration'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for the microservice_admin_user_settings() form.
+ */
+function microservice_settings_submit($form, &$form_state) {
+
+  $config = config('microservice.settings');
+
+  $config->set('proxy_url', $form_state['values']['proxy_url']);
+  $config->set('url', $form_state['values']['url']);
+  $config->set('secure', $form_state['values']['secure']);
+  $config->save();
+  backdrop_set_message(t('The configuration options have been saved.'));
+}
+
+/**
+ * Initiate Microservice.
+ */
+function microservice_service($route = FALSE, $accessToken = FALSE){
+  static $routes;
+  $config = config('microservice.settings');
+  if($route) {
+    if(!$routes) {
+      $microservice_settings['url'] = $config->get('url');
+      $microservice_settings['secureKey'] =  $config->get('secure');
+      $microservice = new MicroserviceClient($microservice_settings);
+      $request = new stdClass();
+      $request->query = new stdClass();
+      $result = $microservice->search($request);
+      foreach($result as $item) {
+        foreach($item->path as $path) {
+          $routes[$path] = $item->secureKey;
+        }
+      }
+    }
+    $settings['url'] = $config->get('proxy_url') . '/' . $route;
+    $settings['secureKey'] = $routes[$route];
+  }
+  else {
+    $settings['url'] = $config->get('url');
+    $settings['secureKey'] = $config->get('secure');
+  }
+
+  return new MicroserviceClient($settings);
+}

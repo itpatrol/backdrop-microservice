@@ -1,0 +1,8 @@
+name = Microservice Integration module
+description = Microservice integration module.
+backdrop = 1.x
+type = module
+package = Microservice
+
+configure = admin/config/microservice
+
