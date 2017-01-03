@@ -1,2 +1,3 @@
-# backdrop-miscroservice
-Backdrop microservice module
+# Backdrop Microservice Integration module
+
+CRUD based communication with services based microservice framework
